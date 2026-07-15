@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Grow Minion — Blog Quality Analyzer</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2064%2064'%3E%3Crect%20width%3D'64'%20height%3D'64'%20rx%3D'14'%20fill%3D'%2317181C'%2F%3E%3Cpath%20d%3D'M15%2033l10%2010%2024-26'%20fill%3D'none'%20stroke%3D'%23F7F7F2'%20stroke-width%3D'7'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%2F%3E%3Ccircle%20cx%3D'50'%20cy%3D'14'%20r%3D'6'%20fill%3D'%23F5D800'%2F%3E%3C%2Fsvg%3E">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+  :root {
+    --ink: #17181C;
+    --ink-2: #3A3B42;
+    --paper: #F7F7F2;
+    --panel: #FFFFFF;
+    --panel-2: #FBFAF5;
+    --rule: #E1E0D6;
+    --rule-soft: #EDECE3;
+    --muted: #6B6A61;
+    --yellow: #F5D800;
+    --yellow-tint: rgba(245, 216, 0, 0.16);
+    --cyan: #0EC4D4;
+    --cyan-tint: rgba(14, 196, 212, 0.12);
+    --red-pen: #C6402B;
+    --green-ok: #2F7A4D;
+    --amber: #B8860B;
+
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 16px;
+
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-6: 24px;
+
+    --shadow-xs: 0 1px 2px rgba(23,24,28,0.06);
+    --shadow-sm: 0 2px 6px rgba(23,24,28,0.06), 0 1px 2px rgba(23,24,28,0.05);
+    --shadow-md: 0 10px 24px rgba(23,24,28,0.10), 0 2px 6px rgba(23,24,28,0.06);
+
+    --ease: cubic-bezier(.2,.7,.3,1);
+    --radius: var(--radius-sm);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background-color: var(--paper);
+    background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D%22160%22%20height%3D%22160%22%3E%3Cg%20opacity%3D%220.05%22%3E%3Ctext%20x%3D%2212%22%20y%3D%2242%22%20font-family%3D%22Georgia%2C%20Times%2C%20serif%22%20font-size%3D%2230%22%20fill%3D%22%2317181C%22%3E%26%23182%3B%3C%2Ftext%3E%3Cpath%20d%3D%22M96%20118l8-11%208%2011%22%20fill%3D%22none%22%20stroke%3D%22%2317181C%22%20stroke-width%3D%221.5%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3Cpath%20d%3D%22M118%2034l7%209%2011-17%22%20fill%3D%22none%22%20stroke%3D%22%2317181C%22%20stroke-width%3D%221.5%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3Cline%20x1%3D%220%22%20y1%3D%2284%22%20x2%3D%22160%22%20y2%3D%2284%22%20stroke%3D%22%2317181C%22%20stroke-width%3D%221%22%20stroke-dasharray%3D%221%207%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E");
+    background-repeat: repeat;
+    color: var(--ink);
+    font-family: 'Inter', system-ui, sans-serif;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .app { max-width: 1180px; margin: 0 auto; padding: 32px 24px 80px; }
+
+  header.top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 3px solid var(--ink);
+    padding-bottom: var(--space-4);
+    margin-bottom: var(--space-2);
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand-mark { display: inline-flex; flex-shrink: 0; }
+  .brand-mark svg { display: block; }
+
+  .wordmark {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 28px;
+    letter-spacing: -0.03em;
+  }
+  .wordmark span { color: var(--cyan); }
+
+  .tagline {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: minmax(0, 380px) 1fr;
+    gap: 22px;
+    margin-top: 24px;
+    align-items: start;
+  }
+  @media (max-width: 880px) {
+    .grid { grid-template-columns: 1fr; }
+  }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-md);
+    padding: var(--space-6);
+    margin-bottom: var(--space-4);
+    box-shadow: var(--shadow-sm);
+    position: relative;
+    overflow: hidden;
+    animation: cardIn .5s var(--ease) both;
+  }
+  .card::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--ink) 0%, var(--ink) 72%, var(--yellow) 100%);
+  }
+  .grid > div:first-child .card:nth-of-type(1) { animation-delay: 0ms; }
+  .grid > div:first-child .card:nth-of-type(2) { animation-delay: 90ms; }
+
+  @keyframes cardIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .card h2 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink);
+    margin: 0 0 var(--space-4);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+  .card h2::before {
+    content: "";
+    width: 10px; height: 10px;
+    background: var(--yellow);
+    display: inline-block;
+    border: 1.5px solid var(--ink);
+    border-radius: 2px;
+  }
+
+  label {
+    display: block;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    margin: var(--space-3) 0 var(--space-1);
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+  }
+  label:first-of-type { margin-top: 0; }
+
+  select, input[type="text"], textarea {
+    width: 100%;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    padding: 10px 12px;
+    border: 1.5px solid var(--rule);
+    border-radius: var(--radius-sm);
+    background-color: var(--paper);
+    color: var(--ink);
+    transition: border-color .15s var(--ease), box-shadow .15s var(--ease), background-color .15s var(--ease);
+  }
+  select:hover, input[type="text"]:hover, textarea:hover { border-color: #C9C7B8; }
+  select:focus, input:focus, textarea:focus,
+  select:focus-visible, input:focus-visible, textarea:focus-visible {
+    outline: none;
+    border-color: var(--cyan);
+    box-shadow: 0 0 0 3px var(--cyan-tint);
+    background-color: var(--panel);
+  }
+
+  select {
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D'14'%20height%3D'14'%20viewBox%3D'0%200%2014%2014'%3E%3Cpath%20d%3D'M3%205l4%204%204-4'%20fill%3D'none'%20stroke%3D'%236B6A61'%20stroke-width%3D'1.6'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%2F%3E%3C%2Fsvg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 34px;
+  }
+
+  textarea#draft {
+    min-height: 340px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    line-height: 1.7;
+    resize: vertical;
+  }
+
+  .charcount {
+    text-align: right;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: var(--space-1);
+  }
+
+  .context-fields { display: none; }
+  .context-fields.show { display: block; animation: cardIn .3s var(--ease) both; }
+
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
+
+  button.primary {
+    width: 100%;
+    margin-top: var(--space-4);
+    background: var(--ink);
+    color: var(--paper);
+    border: none;
+    padding: 14px 16px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    box-shadow: var(--shadow-xs);
+    transition: transform .15s var(--ease), box-shadow .15s var(--ease), background .15s var(--ease);
+  }
+  button.primary:hover { background: #000; transform: translateY(-2px); box-shadow: var(--shadow-md); }
+  button.primary:active { transform: translateY(0) scale(.98); box-shadow: var(--shadow-xs); }
+  button.primary:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+  button.primary:disabled { background: var(--muted); cursor: wait; transform: none; box-shadow: none; }
+
+  button.secondary {
+    background: transparent;
+    border: 1.5px solid var(--ink);
+    color: var(--ink);
+    padding: 11px 16px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: transform .15s var(--ease), box-shadow .15s var(--ease), background .15s var(--ease), color .15s var(--ease);
+  }
+  button.secondary:hover { background: var(--ink); color: var(--paper); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+  button.secondary:active { transform: translateY(0) scale(.97); }
+  button.secondary:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+  button.secondary:disabled { opacity: .6; cursor: wait; transform: none; box-shadow: none; }
+
+  .empty-state {
+    border: 1.5px dashed var(--rule);
+    border-radius: var(--radius-lg);
+    padding: 56px 28px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 14px;
+    background: var(--panel-2);
+    animation: cardIn .5s var(--ease) both;
+  }
+  .empty-state svg { display: block; margin: 0 auto var(--space-4); }
+  .empty-state .empty-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 14.5px;
+    color: var(--ink);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: var(--space-2);
+  }
+  .empty-state .empty-copy { max-width: 44ch; margin: 0 auto; line-height: 1.6; }
+
+  .report-head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+  }
+
+  .stamp {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    padding: 10px 18px;
+    border: 3px double currentColor;
+    border-radius: var(--radius-sm);
+    display: inline-block;
+    white-space: nowrap;
+    animation: stampIn .45s var(--ease) both;
+  }
+  @keyframes stampIn {
+    0% { opacity: 0; transform: scale(1.6) rotate(-16deg); }
+    60% { opacity: 1; transform: scale(0.94) rotate(-1deg); }
+    100% { opacity: 1; transform: scale(1) rotate(-3deg); }
+  }
+  .stamp.pass { color: var(--green-ok); }
+  .stamp.revision { color: var(--amber); }
+  .stamp.fail { color: var(--red-pen); }
+
+  .score-big {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 42px;
+    font-weight: 500;
+    line-height: 1;
+    color: var(--ink);
+  }
+  .score-big small { font-size: 15px; color: var(--muted); font-weight: 400; margin-left: 2px; }
+  .score-num { display: inline-block; min-width: 1.6ch; }
+
+  .meta-line {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: var(--space-3);
+    letter-spacing: 0.02em;
+  }
+
+  .section-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 12.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-2);
+    margin: var(--space-6) 0 var(--space-3);
+    padding-bottom: var(--space-2);
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .check-item {
+    display: grid;
+    grid-template-columns: 4px 1fr;
+    gap: var(--space-3);
+    padding: 10px 0;
+    border-bottom: 1px solid var(--rule-soft);
+    animation: itemIn .35s var(--ease) both;
+    animation-delay: var(--stagger-delay, 0ms);
+  }
+  @keyframes itemIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .check-item:last-child { border-bottom: none; }
+  .check-item .rule { background: var(--rule); border-radius: 2px; }
+  .check-item.flag .rule { background: var(--red-pen); }
+  .check-item.pass .rule { background: var(--green-ok); }
+
+  .check-label { font-weight: 600; font-size: 13px; color: var(--ink); }
+  .check-note { font-size: 13px; color: var(--muted); margin-top: 3px; line-height: 1.5; }
+  .check-note .hit {
+    display: block;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11.5px;
+    background: var(--panel-2);
+    border: 1px solid var(--rule-soft);
+    padding: 5px 9px;
+    margin-top: 5px;
+    border-radius: var(--radius-sm);
+  }
+
+  .fixes-list { padding-left: 20px; margin: 0; }
+  .fixes-list li { margin-bottom: var(--space-2); font-size: 13.5px; }
+
+  .loading-line {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12.5px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+    padding-bottom: 14px;
+  }
+  .loading-line::after {
+    content: "";
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: 3px;
+    border-radius: 2px;
+    background: linear-gradient(90deg, var(--rule-soft) 0%, var(--cyan) 45%, var(--yellow) 55%, var(--rule-soft) 100%);
+    background-size: 220% 100%;
+    animation: shimmer 1.4s linear infinite;
+  }
+  @keyframes shimmer {
+    0% { background-position: 120% 0; }
+    100% { background-position: -120% 0; }
+  }
+  .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--cyan);
+    animation: pulse 1.1s infinite ease-in-out;
+    flex-shrink: 0;
+  }
+  @keyframes pulse { 0%,100% { opacity: 0.25; transform: scale(.85); } 50% { opacity: 1; transform: scale(1); } }
+
+  .permission-bar {
+    margin-top: var(--space-6);
+    padding: var(--space-4);
+    border-radius: var(--radius-md);
+    background: var(--cyan-tint);
+    border: 1px solid rgba(14,196,212,0.25);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+  }
+  .permission-bar p { margin: 0; font-size: 13.5px; color: var(--ink-2); max-width: 60ch; }
+
+  .final-block { margin-top: var(--space-4); animation: cardIn .4s var(--ease) both; }
+  .final-content {
+    white-space: pre-wrap;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    line-height: 1.7;
+    background: var(--panel-2);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-md);
+    padding: var(--space-4);
+    max-height: 480px;
+    overflow-y: auto;
+    box-shadow: inset 0 1px 3px rgba(23,24,28,0.05);
+  }
+  .changelog { padding-left: 20px; margin: var(--space-3) 0 0; }
+  .changelog li { font-size: 13px; margin-bottom: var(--space-2); }
+
+  .limits {
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: var(--space-6);
+    border-top: 1px dashed var(--rule);
+    padding-top: var(--space-3);
+    line-height: 1.6;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="top">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg width="30" height="30" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+          <rect width="64" height="64" rx="14" fill="#17181C"/>
+          <path d="M15 33l10 10 24-26" fill="none" stroke="#F7F7F2" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="50" cy="14" r="6" fill="#F5D800"/>
+        </svg>
+      </span>
+      <div class="wordmark">Grow<span>Minion</span> QA</div>
+    </div>
+    <div class="tagline">Blog Quality Analyzer</div>
+  </header>
+
+  <div class="grid">
+
+    <div>
+      <div class="card">
+        <h2>Business Context</h2>
+
+        <label for="client">Client</label>
+        <select id="client">
+          <option value="">— Select or choose Other/New —</option>
+          <option>IPJ Immigration Solutions</option>
+          <option>Ohio Roof Masters</option>
+          <option>Cloudhaus Law</option>
+          <option>Akladios Law</option>
+          <option>LeVogue Med Spa</option>
+          <option>California Reverse Mortgage</option>
+          <option>Coastline Lift</option>
+          <option>Adam Kelley Real Estate</option>
+          <option value="__other">Other / New business</option>
+        </select>
+
+        <div id="customFields" class="context-fields">
+          <label for="bizName">Business name</label>
+          <input type="text" id="bizName" placeholder="e.g. Riverside Dental Group">
+        </div>
+
+        <div class="row2">
+          <div>
+            <label for="industry">Industry</label>
+            <input type="text" id="industry" placeholder="e.g. Roofing, Immigration law">
+          </div>
+          <div>
+            <label for="location">Location</label>
+            <input type="text" id="location" placeholder="e.g. Ohio, Ontario">
+          </div>
+        </div>
+
+        <label for="audience">Audience (optional)</label>
+        <input type="text" id="audience" placeholder="e.g. Homeowners, prospective immigrants">
+
+        <label for="contentType">Content type</label>
+        <select id="contentType">
+          <option>Blog post</option>
+          <option>Service page</option>
+          <option>GBP post</option>
+          <option>Other</option>
+        </select>
+
+        <label for="keyword">Target keyword (optional, for title/meta scoring)</label>
+        <input type="text" id="keyword" placeholder="e.g. roof replacement cost">
+      </div>
+
+      <div class="card">
+        <h2>Draft</h2>
+        <label for="draft">Paste the blog post or content draft</label>
+        <textarea id="draft" placeholder="# Title&#10;&#10;## Section heading&#10;&#10;Body paragraphs..."></textarea>
+        <div class="charcount" id="charcount">0 characters</div>
+        <button class="primary" id="runBtn">Run Quality Check</button>
+      </div>
+    </div>
+
+    <div>
+      <div id="reportWrap">
+        <div class="empty-state" id="emptyState">
+          <svg width="72" height="72" viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <rect x="20" y="12" width="46" height="62" rx="5" fill="#FFFFFF" stroke="#17181C" stroke-width="2.5"/>
+            <line x1="29" y1="28" x2="57" y2="28" stroke="#E1E0D6" stroke-width="3" stroke-linecap="round"/>
+            <line x1="29" y1="38" x2="57" y2="38" stroke="#E1E0D6" stroke-width="3" stroke-linecap="round"/>
+            <line x1="29" y1="48" x2="48" y2="48" stroke="#E1E0D6" stroke-width="3" stroke-linecap="round"/>
+            <circle cx="62" cy="60" r="16" fill="#F7F7F2" stroke="#0EC4D4" stroke-width="3"/>
+            <path d="M55 60l5 5 9-10" stroke="#17181C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="80" cy="46" r="5" fill="#F5D800" stroke="#17181C" stroke-width="1.5"/>
+          </svg>
+          <div class="empty-title">Awaiting a draft</div>
+          <div class="empty-copy">Fill in the business context, paste a draft, then run the check.<br>The mechanical checks run instantly. Tone, structure, and CTA analysis takes a few seconds.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="limits">
+    <strong>Known limitations:</strong> no exact-match plagiarism detection (originality is a read-through heuristic only) ·
+    no live broken-link checking · no live fact verification for cited stats · reading level is an estimate, not a certified score ·
+    very long posts (1000+ words) may need the auto-fix run twice since output length is capped.
+  </div>
+
+</div>
+
+<script>
+const BANNED_WORDS = [
+  "fast-paced","in the realm of","in summary","in conclusion","thanks to",
+  "in today's world","welcome to","imagine","think of","absorb","admittedly",
+  "adorn","affinity","albeit","alleviate","amalgamation","amplify","anomaly",
+  "anticipate","ascertain","at the forefront","augment","awe-inspiring",
+  "behemoth","benediction","bespoke","breathtaking","catalyst","ceaseless",
+  "commence","compelling","complement","concur","consecutively","contemplate",
+  "contrarily","conversely","culminate","cumbersome","dazzling","decipher",
+  "deluge","divergent","diversify","efficacy","elucidate","embellish",
+  "eminent","encompass","endeavor","endorse","enigmatic","enthrall","epitome",
+  "equilibrium","escalate","euphoria","exemplify","exorbitant","exquisite",
+  "extrapolate","facilitate","fathom","fortuitous","frenzy","futuristic",
+  "galore","garner","glean","heterogeneous","homogeneous","idiosyncratic",
+  "illuminate","immerse","imminent","impart","incandescent","incessant",
+  "incumbent","indispensable","ineffable","inevitable","ingenuity","inhibit",
+  "innovate","insatiable","intertwined","intricately","intuitive","invigorate",
+  "labyrinth","luminous","magnify","metamorphosis","meticulous","noteworthy",
+  "on the horizon","ostentatious","overarching","paradox","paramount",
+  "pinnacle","pivotal","plenitude","ponder","potent","preeminent","profound",
+  "proliferate","propagate","quintessential","radiate","rejuvenate",
+  "resilient","resonate","revolutionary","rhetoric","rigorous","salient",
+  "saturate","scintillating","serendipity","simultaneously","staggering",
+  "stipulate","subsequent","substantiate","symbiotic","synthesize",
+  "tantalize","transcend","ubiquitous","unprecedented","validate","venerable",
+  "vortex","wield","zenith","beacon","bombastic","by the same token",
+  "captivate","comparatively","competitive digital world","correspondingly",
+  "debunking","delve","demystified","demystifying","discover","dive",
+  "elevate","embark","embrace","enhance","equally","equally important",
+  "ever-evolving","explore","firstly","furry friend","furthermore",
+  "generated by ai","gone are the days","hitherto","identically",
+  "in light of","in the sea of","in this digital landscape",
+  "it can be a daunting task","it is crucial","it is essential",
+  "it is important","leverage","look no further","moreover","navigating",
+  "nested","nestled","not to mention","now let's move on","picture this",
+  "plethora","realm","remember that","revolution","revolutionize",
+  "say goodbye","say hello to unlock","secondly","shed light","similarly",
+  "solace","supercharge","switching gears","the ultimate guide",
+  "this innovative solution","to say nothing of","today's digital world",
+  "together with","top-notch","trailblazer","treasure box","treasure trove",
+  "uniquely","unleash","unlock","unveil","we've got you covered",
+  "when it comes to","whilst","whimsical",
+];
+
+const AMERICAN_SPELLINGS = {
+  color: "colour", favor: "favour", center: "centre", honor: "honour",
+  labor: "labour", neighbor: "neighbour", theater: "theatre",
+  traveled: "travelled", canceled: "cancelled", modeling: "modelling",
+  gray: "grey", defense: "defence", offense: "offence", license: "licence",
+};
+
+const WH_WORDS = ["what", "when", "where", "why", "who", "how"];
+
+const CLIENTS = {
+  "IPJ Immigration Solutions": { industry: "Immigration law", location: "Canada (national)", audience: "Prospective immigrants & applicants" },
+  "Ohio Roof Masters": { industry: "Roofing & home services", location: "Urbana / Sidney / Troy / Lima / Wapakoneta, Ohio", audience: "Homeowners" },
+  "Cloudhaus Law": { industry: "Franchise law", location: "Richmond Hill, Ontario", audience: "Franchisors & franchisees" },
+  "Akladios Law": { industry: "Personal injury law", location: "Hamilton, Ontario", audience: "Accident & injury victims" },
+  "LeVogue Med Spa": { industry: "Medical spa / aesthetics", location: "Cary, NC area", audience: "Med spa clients" },
+  "California Reverse Mortgage": { industry: "Reverse mortgage / finance", location: "California", audience: "Homeowners 62+" },
+  "Coastline Lift": { industry: "Elevator / lift company", location: "Coastal service area", audience: "Building owners & managers" },
+  "Adam Kelley Real Estate": { industry: "Real estate", location: "North County San Diego", audience: "Home buyers & sellers" },
+};
+
+function escapeRegExp(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
+
+function splitSentences(text) {
+  const clean = text.replace(/\s+/g, " ").trim();
+  return clean.split(/(?<=[.!?])\s+(?=[A-Z0-9])/).filter(Boolean);
+}
+function splitParagraphs(text) {
+  return text.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+}
+function stripHeaderMarkers(text) { return text.replace(/^#+\s+/gm, ""); }
+
+function countSyllables(word) {
+  word = word.toLowerCase().replace(/[^a-z]/g, "");
+  if (!word) return 0;
+  const vowels = "aeiouy";
+  let count = 0, prevVowel = false;
+  for (const ch of word) {
+    const isVowel = vowels.includes(ch);
+    if (isVowel && !prevVowel) count++;
+    prevVowel = isVowel;
+  }
+  if (word.endsWith("e") && count > 1) count--;
+  return Math.max(count, 1);
+}
+
+function fleschKincaidGrade(text) {
+  const sentences = splitSentences(text);
+  const words = text.match(/[A-Za-z']+/g) || [];
+  if (!sentences.length || !words.length) return 0;
+  const syllables = words.reduce((sum, w) => sum + countSyllables(w), 0);
+  const grade = 0.39 * (words.length / sentences.length) + 11.8 * (syllables / words.length) - 15.59;
+  return Math.round(grade * 10) / 10;
+}
+
+function checkBannedWords(text) {
+  const hits = [];
+  const lower = text.toLowerCase();
+  for (const phrase of BANNED_WORDS) {
+    const re = new RegExp("\\b" + escapeRegExp(phrase) + "\\b", "g");
+    let m;
+    while ((m = re.exec(lower)) !== null) {
+      const start = Math.max(0, m.index - 40);
+      const end = Math.min(text.length, m.index + phrase.length + 40);
+      hits.push({ word: phrase, context: "..." + text.slice(start, end).trim() + "..." });
+    }
+  }
+  return hits;
+}
+function checkEmDashes(text) {
+  const hits = [];
+  const re = /[—–]/g;
+  let m;
+  while ((m = re.exec(text)) !== null) {
+    const start = Math.max(0, m.index - 40);
+    const end = Math.min(text.length, m.index + 40);
+    hits.push("..." + text.slice(start, end).trim() + "...");
+  }
+  return hits;
+}
+function checkWHOpeners(text) {
+  const hits = [];
+  for (const sent of splitSentences(stripHeaderMarkers(text))) {
+    const firstWord = (sent.match(/[A-Za-z']+/) || [""])[0].toLowerCase();
+    if (WH_WORDS.includes(firstWord)) hits.push(sent);
+  }
+  return hits;
+}
+function checkParagraphLength(text) {
+  const hits = [];
+  splitParagraphs(stripHeaderMarkers(text)).forEach((p, i) => {
+    const n = splitSentences(p).length;
+    if (n > 3) hits.push({ paragraph: i + 1, sentences: n, text: p.slice(0, 120) + (p.length > 120 ? "..." : "") });
+  });
+  return hits;
+}
+function checkAmericanSpelling(text) {
+  const hits = [];
+  const lower = text.toLowerCase();
+  for (const [us, ca] of Object.entries(AMERICAN_SPELLINGS)) {
+    const re = new RegExp("\\b" + us + "\\w*\\b", "g");
+    let m;
+    while ((m = re.exec(lower)) !== null) {
+      hits.push({ found: text.slice(m.index, m.index + m[0].length), suggest: ca });
+    }
+  }
+  return hits;
+}
+function checkSeoStructure(text) {
+  const h1 = (text.match(/^#\s+.+$/gm) || []).length;
+  const h2 = (text.match(/^##\s+.+$/gm) || []).length;
+  return { h1Count: h1, h2Count: h2, hasHeaders: h1 + h2 > 0 };
+}
+
+function runMechanicalChecks(text) {
+  const banned = checkBannedWords(text);
+  const emDashes = checkEmDashes(text);
+  const whOpeners = checkWHOpeners(text);
+  const longParas = checkParagraphLength(text);
+  const spelling = checkAmericanSpelling(text);
+  const grade = fleschKincaidGrade(text);
+  const seo = checkSeoStructure(text);
+
+  let score = 65;
+  score -= Math.min(banned.length * 2, 20);
+  score -= Math.min(emDashes.length * 5, 10);
+  score -= Math.min(whOpeners.length * 3, 10);
+  score -= Math.min(longParas.length * 2, 10);
+  score -= spelling.length ? 5 : 0;
+  if (grade > 10) score -= 10; else if (grade > 9) score -= 5;
+  score = Math.max(score, 0);
+
+  return { score, grade, banned, emDashes, whOpeners, longParas, spelling, seo };
+}
+
+const POWER_WORDS = new Set("ultimate best top proven free easy quick fast simple complete guide essential powerful amazing incredible secret hack boost instant guaranteed step expert exclusive comprehensive definitive".split(" "));
+
+function extractTitle(text) {
+  const m = text.match(/^#\s+(.+)$/m);
+  if (m) return m[1].trim();
+  const firstLine = text.split("\n").find(l => l.trim());
+  return firstLine ? firstLine.trim().replace(/^#+\s*/, "") : "";
+}
+
+function scoreTitle(title, keyword) {
+  if (!title) return null;
+  const lower = title.toLowerCase();
+  const words = lower.match(/[a-z]+/g) || [];
+  let score = 50;
+  const factors = [];
+  const len = title.length;
+  if (len >= 50 && len <= 60) { score += 10; factors.push(["Length: ideal (50-60 chars)", 10]); }
+  else if (len >= 40 && len < 50) { score += 5; factors.push(["Length: acceptable", 5]); }
+  else if (len > 60) { score -= 5; factors.push(["Length: will truncate in search results", -5]); }
+  else if (len < 30) { score -= 10; factors.push(["Length: too short", -10]); }
+
+  if (/\d+/.test(title)) { score += 8; factors.push(["Contains a number", 8]); }
+  const pw = words.filter(w => POWER_WORDS.has(w));
+  if (pw.length) { const pts = Math.min(pw.length * 4, 12); score += pts; factors.push([`Power words: ${pw.join(", ")}`, pts]); }
+  if (/\b20\d{2}\b/.test(title)) { score += 5; factors.push(["Contains a year (freshness signal)", 5]); }
+  if (title.trim().endsWith("?")) { score += 5; factors.push(["Question format", 5]); }
+
+  if (keyword) {
+    const kw = keyword.toLowerCase();
+    if (lower.includes(kw)) {
+      const pos = lower.indexOf(kw);
+      if (pos === 0) { score += 10; factors.push(["Keyword at the very start", 10]); }
+      else if (pos < 20) { score += 5; factors.push(["Keyword near the start", 5]); }
+      else { score += 2; factors.push(["Keyword present but late", 2]); }
+    } else { score -= 10; factors.push(["Target keyword missing from title", -10]); }
+  }
+  return { score: Math.min(Math.max(score, 0), 100), factors, length: len };
+}
+
+function generateMetaDescriptions(text, keyword, numVariants) {
+  numVariants = numVariants || 3;
+  const body = stripHeaderMarkers(text);
+  const paras = splitParagraphs(body).filter(p => p.length > 30).slice(0, 6);
+  let sentences = [];
+  for (const p of paras) sentences = sentences.concat(splitSentences(p));
+  sentences = sentences.filter(s => s.length > 40 && s.length < 200);
+
+  const kw = keyword ? keyword.toLowerCase() : "";
+  const scored = sentences.slice(0, 20).map((s, i) => {
+    let score = 0;
+    if (kw && s.toLowerCase().includes(kw)) score += 50;
+    score += Math.max(0, 20 - i * 2);
+    if (s.length >= 100 && s.length <= 155) score += 15;
+    return [score, s];
+  }).sort((a, b) => b[0] - a[0]);
+
+  const seen = new Set();
+  const out = [];
+  for (const [, s] of scored) {
+    const truncated = s.length > 155 ? s.slice(0, 155).split(" ").slice(0, -1).join(" ") + "..." : s;
+    if (!seen.has(truncated)) {
+      seen.add(truncated);
+      out.push({ text: truncated, length: truncated.length, lengthOk: truncated.length >= 120 && truncated.length <= 160, hasKeyword: kw ? truncated.toLowerCase().includes(kw) : null });
+    }
+    if (out.length >= numVariants) break;
+  }
+  return out;
+}
+
+async function callBackend(endpoint, payload) {
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || `Request failed (${response.status})`);
+  }
+  return data;
+}
+
+function buildBusinessContextString() {
+  const name = document.getElementById("bizName")?.value || document.getElementById("client").value;
+  const industry = document.getElementById("industry").value;
+  const location = document.getElementById("location").value;
+  const audience = document.getElementById("audience").value;
+  return `Business: ${name || "not specified"}. Industry: ${industry || "not specified"}. Location: ${location || "not specified"}. Audience: ${audience || "not specified"}.`;
+}
+
+async function getJudgmentAnalysis(draft, businessContext, contentType) {
+  return callBackend("/api/analyze", { draft, businessContext, contentType });
+}
+
+async function getRevision(draft, businessContext, contentType, mechanical, judgment) {
+  return callBackend("/api/revise", { draft, businessContext, contentType, mechanical, judgment });
+}
+
+const clientSelect = document.getElementById("client");
+const customFields = document.getElementById("customFields");
+const industryInput = document.getElementById("industry");
+const locationInput = document.getElementById("location");
+const audienceInput = document.getElementById("audience");
+const draftEl = document.getElementById("draft");
+const charcountEl = document.getElementById("charcount");
+const runBtn = document.getElementById("runBtn");
+const reportWrap = document.getElementById("reportWrap");
+
+// --- Purely presentational helpers (no business logic here) ---
+const prefersReducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function animateValue(el, to, duration = 800) {
+  if (!el) return;
+  if (prefersReducedMotion()) { el.textContent = to; return; }
+  const start = performance.now();
+  function tick(now) {
+    const p = Math.min((now - start) / duration, 1);
+    const eased = 1 - Math.pow(1 - p, 3);
+    el.textContent = Math.round(eased * to);
+    if (p < 1) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+
+function staggerReveal(container, selector, stepMs = 30, capMs = 480) {
+  if (!container) return;
+  const step = prefersReducedMotion() ? 0 : stepMs;
+  container.querySelectorAll(selector).forEach((el, i) => {
+    el.style.setProperty("--stagger-delay", `${Math.min(i * step, capMs)}ms`);
+  });
+}
+// --- end presentational helpers ---
+
+clientSelect.addEventListener("change", () => {
+  const val = clientSelect.value;
+  if (val === "__other") {
+    customFields.classList.add("show");
+    industryInput.value = ""; locationInput.value = ""; audienceInput.value = "";
+  } else if (val && CLIENTS[val]) {
+    customFields.classList.remove("show");
+    industryInput.value = CLIENTS[val].industry;
+    locationInput.value = CLIENTS[val].location;
+    audienceInput.value = CLIENTS[val].audience;
+  } else {
+    customFields.classList.remove("show");
+    industryInput.value = ""; locationInput.value = ""; audienceInput.value = "";
+  }
+});
+
+draftEl.addEventListener("input", () => {
+  charcountEl.textContent = `${draftEl.value.length.toLocaleString()} characters`;
+});
+
+function renderCheckItem(label, isFlag, noteHtml) {
+  return `<div class="check-item ${isFlag ? "flag" : "pass"}">
+    <div class="rule"></div>
+    <div>
+      <div class="check-label">${label} ${isFlag ? "— flagged" : "— pass"}</div>
+      ${noteHtml ? `<div class="check-note">${noteHtml}</div>` : ""}
+    </div>
+  </div>`;
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+function renderMechanicalSection(m) {
+  let html = `<div class="section-title">Mechanical checks</div>`;
+  html += renderCheckItem("Banned words", m.banned.length > 0,
+    m.banned.length ? m.banned.slice(0, 8).map(b => `<span class="hit">"${escapeHtml(b.word)}" → ${escapeHtml(b.context)}</span>`).join("") : `0 found`);
+  html += renderCheckItem("Em dashes", m.emDashes.length > 0,
+    m.emDashes.length ? m.emDashes.map(e => `<span class="hit">${escapeHtml(e)}</span>`).join("") : `0 found`);
+  html += renderCheckItem("WH-word openers", m.whOpeners.length > 0,
+    m.whOpeners.length ? m.whOpeners.map(w => `<span class="hit">${escapeHtml(w)}</span>`).join("") : `0 found`);
+  html += renderCheckItem("Paragraph length (max 3 sentences)", m.longParas.length > 0,
+    m.longParas.length ? m.longParas.map(p => `<span class="hit">Paragraph ${p.paragraph} (${p.sentences} sentences): ${escapeHtml(p.text)}</span>`).join("") : `0 over limit`);
+  html += renderCheckItem("Reading level", m.grade > 9,
+    `Estimated grade ${m.grade} (target ~7)`);
+  html += renderCheckItem("Canadian spelling", m.spelling.length > 0,
+    m.spelling.length ? m.spelling.map(s => `<span class="hit">"${escapeHtml(s.found)}" → use "${escapeHtml(s.suggest)}"</span>`).join("") : `consistent`);
+  html += renderCheckItem("On-page SEO structure", false,
+    m.seo.hasHeaders ? `${m.seo.h1Count} H1(s), ${m.seo.h2Count} H2(s) found` : `not applicable — no headers in draft`);
+  return html;
+}
+
+function renderJudgmentSection(j) {
+  const labels = {
+    tone: "Tone & voice", structure: "Structure fit", fluff: "Fluff & padding",
+    cta: "CTA strength", transitions: "Transitions", source: "Source & credibility",
+    depth: "Depth & coverage", originality: "Originality feel (heuristic)"
+  };
+  let html = `<div class="section-title">Judgment checks (Claude analysis)</div>`;
+  for (const key of Object.keys(labels)) {
+    const v = j[key] || { status: "pass", note: "" };
+    html += renderCheckItem(labels[key], v.status === "flag", v.note ? escapeHtml(v.note) : "");
+  }
+  if (j.top_fixes && j.top_fixes.length) {
+    html += `<div class="section-title">Top fixes</div><ol class="fixes-list">${j.top_fixes.map(f => `<li>${escapeHtml(f)}</li>`).join("")}</ol>`;
+  }
+  return html;
+}
+
+function renderSeoHelper(draft, keyword) {
+  const title = extractTitle(draft);
+  const t = scoreTitle(title, keyword);
+  const metas = generateMetaDescriptions(draft, keyword, 3);
+  let html = `<div class="section-title">SEO helper</div>`;
+  if (t) {
+    html += `<div class="check-item pass"><div class="rule"></div><div>
+      <div class="check-label">Title: "${escapeHtml(title)}" — ${t.score}/100</div>
+      <div class="check-note">${t.factors.map(f => `${f[1] > 0 ? "+" : ""}${f[1]} ${escapeHtml(f[0])}`).join(" · ")}</div>
+    </div></div>`;
+  }
+  if (metas.length) {
+    html += metas.map((d, i) => `<div class="check-item pass"><div class="rule"></div><div>
+      <div class="check-label">Meta description candidate ${i + 1} (${d.length} chars${d.lengthOk ? "" : ", check length"})</div>
+      <div class="check-note">${escapeHtml(d.text)}</div>
+    </div></div>`).join("");
+  }
+  return html;
+}
+
+function computeTotalScore(mechScore, judgment) {
+  let jDeduct = 0;
+  for (const [key, val] of Object.entries(judgment)) {
+    if (key === "top_fixes") continue;
+    jDeduct += Number((val && val.deduct) || 0);
+  }
+  const jScore = Math.max(35 - jDeduct, 0);
+  return Math.min(mechScore + jScore, 100);
+}
+
+let currentDraft = "", currentMechanical = null, currentJudgment = null, currentContext = "", currentContentType = "";
+
+runBtn.addEventListener("click", async () => {
+  const draft = draftEl.value.trim();
+  if (!draft) { alert("Paste a draft first."); return; }
+
+  currentDraft = draft;
+  currentContext = buildBusinessContextString();
+  currentContentType = document.getElementById("contentType").value;
+  const keyword = document.getElementById("keyword").value.trim();
+
+  const mech = runMechanicalChecks(draft);
+  currentMechanical = mech;
+
+  runBtn.disabled = true;
+  runBtn.textContent = "Checking...";
+
+  reportWrap.innerHTML = `<div class="card">
+    <div class="report-head">
+      <div class="score-big"><span class="score-num" id="scoreValue">0</span><small>/65 mechanical</small></div>
+    </div>
+    <div class="meta-line">${escapeHtml(currentContext)} · ${escapeHtml(currentContentType)}</div>
+    ${renderMechanicalSection(mech)}
+    ${renderSeoHelper(draft, keyword)}
+    <div class="section-title">Judgment checks (Claude analysis)</div>
+    <div class="loading-line"><span class="dot"></span> Analyzing tone, structure, CTA, and credibility...</div>
+  </div>`;
+  animateValue(document.getElementById("scoreValue"), mech.score, 700);
+  staggerReveal(reportWrap, ".check-item");
+
+  try {
+    const judgment = await getJudgmentAnalysis(draft, currentContext, currentContentType);
+    currentJudgment = judgment;
+    const total = computeTotalScore(mech.score, judgment);
+    const stampClass = total >= 90 ? "pass" : total >= 70 ? "revision" : "fail";
+    const stampText = total >= 90 ? "Pass" : total >= 70 ? "Needs revision" : "Fail";
+
+    reportWrap.innerHTML = `<div class="card">
+      <div class="report-head">
+        <div class="stamp ${stampClass}">${stampText}</div>
+        <div class="score-big"><span class="score-num" id="scoreValue">0</span><small>/100</small></div>
+      </div>
+      <div class="meta-line">${escapeHtml(currentContext)} · ${escapeHtml(currentContentType)}</div>
+      ${renderMechanicalSection(mech)}
+      ${renderSeoHelper(draft, keyword)}
+      ${renderJudgmentSection(judgment)}
+      <div class="permission-bar">
+        <p>Want these fixes applied automatically? This edits only what's flagged and won't invent facts or sources.</p>
+        <button class="secondary" id="applyFixesBtn">Apply Fixes</button>
+      </div>
+      <div id="finalBlock"></div>
+    </div>`;
+    animateValue(document.getElementById("scoreValue"), total, 900);
+    staggerReveal(reportWrap, ".check-item");
+
+    document.getElementById("applyFixesBtn").addEventListener("click", applyFixes);
+  } catch (err) {
+    reportWrap.innerHTML += `<div class="card"><div class="check-note">Judgment analysis failed: ${escapeHtml(err.message || String(err))}. Mechanical results above are still valid — try running the check again.</div></div>`;
+  } finally {
+    runBtn.disabled = false;
+    runBtn.textContent = "Run Quality Check";
+  }
+});
+
+async function applyFixes() {
+  const btn = document.getElementById("applyFixesBtn");
+  const finalBlock = document.getElementById("finalBlock");
+  btn.disabled = true;
+  btn.textContent = "Revising...";
+  finalBlock.innerHTML = `<div class="loading-line" style="margin-top:16px;"><span class="dot"></span> Applying fixes and writing the final version...</div>`;
+
+  try {
+    const result = await getRevision(currentDraft, currentContext, currentContentType, currentMechanical, currentJudgment);
+    finalBlock.innerHTML = `<div class="final-block">
+      <div class="section-title">Final content</div>
+      <div class="final-content" id="finalContentText">${escapeHtml(result.revised_content)}</div>
+      <button class="secondary" id="copyFinalBtn" style="margin-top:10px;">Copy Final Content</button>
+      <div class="section-title" style="margin-top:20px;">Changelog</div>
+      <ul class="changelog">${(result.changelog || []).map(c => `<li>${escapeHtml(c)}</li>`).join("")}</ul>
+    </div>`;
+    document.getElementById("copyFinalBtn").addEventListener("click", () => {
+      navigator.clipboard.writeText(result.revised_content);
+      const b = document.getElementById("copyFinalBtn");
+      b.textContent = "Copied!";
+      setTimeout(() => { b.textContent = "Copy Final Content"; }, 1500);
+    });
+  } catch (err) {
+    finalBlock.innerHTML = `<div class="check-note">Revision failed: ${escapeHtml(err.message || String(err))}. Try again.</div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Apply Fixes";
+  }
+}
+</script>
+</body>
+</html>
